@@ -1,18 +1,18 @@
-<testsuites id="" name="" tests="7" failures="0" skipped="0" errors="0" time="5.985947">
-<testsuite name="checkout.spec.js" timestamp="2026-11-22T05:44:08.144Z" hostname="chromium" tests="7" failures="0" skipped="0" time="4.241" errors="0">
-<testcase name="AT-01: [Happy Path] adding product and submitting valid name renders confirmation with ORD- reference, name, and exact amount" classname="checkout.spec.js" time="1.182">
+<testsuites id="" name="" tests="7" failures="0" skipped="0" errors="0" time="5.3829400000000005">
+<testsuite name="checkout.spec.js" timestamp="2026-11-22T05:54:41.407Z" hostname="chromium" tests="7" failures="0" skipped="0" time="3.837" errors="0">
+<testcase name="AT-01: [Happy Path] adding product and submitting valid name renders confirmation with ORD- reference, name, and exact amount" classname="checkout.spec.js" time="0.657">
 </testcase>
-<testcase name="AT-02: [Validation] submitting with empty name displays error message, blocks confirmation, and preserves cart line" classname="checkout.spec.js" time="0.468">
+<testcase name="AT-02: [Validation] submitting with empty name displays error message, blocks confirmation, and preserves cart line" classname="checkout.spec.js" time="0.466">
 </testcase>
-<testcase name="AT-03: [Calculation] updating product quantities computes exact line totals and order total via integer-cents arithmetic" classname="checkout.spec.js" time="0.467">
+<testcase name="AT-03: [Calculation] updating product quantities computes exact line totals and order total via integer-cents arithmetic" classname="checkout.spec.js" time="0.484">
 </testcase>
-<testcase name="AT-04: [Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation" classname="checkout.spec.js" time="0.589">
+<testcase name="AT-04: [Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation" classname="checkout.spec.js" time="0.765">
 </testcase>
-<testcase name="AT-05: [Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name" classname="checkout.spec.js" time="0.452">
+<testcase name="AT-05: [Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name" classname="checkout.spec.js" time="0.4">
 </testcase>
-<testcase name="AT-06: [Data Preservation] removing items after entering customer name retains input value upon validation failure" classname="checkout.spec.js" time="0.546">
+<testcase name="AT-06: [Data Preservation] removing items after entering customer name retains input value upon validation failure" classname="checkout.spec.js" time="0.503">
 </testcase>
-<testcase name="AT-07: [Edge Cases] scientific notation (1e2), zero, negative, and decimal inputs revert to last valid quantity while &gt;99 clamps to 99" classname="checkout.spec.js" time="0.537">
+<testcase name="AT-07: [Edge Cases] scientific notation (1e2), zero, negative, and decimal inputs revert to last valid quantity while &gt;99 clamps to 99" classname="checkout.spec.js" time="0.562">
 </testcase>
 </testsuite>
 </testsuites>
