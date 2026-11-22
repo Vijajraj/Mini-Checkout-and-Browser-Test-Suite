@@ -54,11 +54,11 @@
 | TC-05 | Qty change updates line and order totals exactly         | P1       | Auto (AT-03)       |
 | TC-06 | Remove item updates total                                | P2       | Manual             |
 | TC-07 | Mixed cart total is exact (3 × $19.99 + 2 × $7.50 = $74.97) | P1 | Auto (AT-03)       |
-| TC-08 | Qty 0 reverts to last valid                              | P2       | Manual             |
-| TC-09 | Qty negative reverts                                     | P2       | Manual             |
-| TC-10 | Qty decimal (1.5) reverts                                | P2       | Manual             |
-| TC-11 | Qty 999 clamps to 99                                     | P2       | Manual             |
-| TC-12 | Qty blank or text reverts                                | P2       | Manual             |
+| TC-08 | Qty 0 reverts to last valid                              | P2       | Auto (AT-07), Manual |
+| TC-09 | Qty negative reverts                                     | P2       | Auto (AT-07), Manual |
+| TC-10 | Qty decimal (1.5) reverts                                | P2       | Auto (AT-07), Manual |
+| TC-11 | Qty 999 clamps to 99                                     | P2       | Auto (AT-07), Manual |
+| TC-12 | Qty blank, text, or scientific notation (1e2) reverts   | P2       | Auto (AT-07), Manual |
 | TC-13 | Entered name preserved after validation failure          | P1       | Auto (AT-06)       |
 | TC-14 | Name `<img src=x onerror=alert(1)>` renders as plain text| P2      | Manual             |
 | TC-15 | Full flow works by keyboard only                         | P3       | Manual             |

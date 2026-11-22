@@ -70,21 +70,21 @@ class CartStore {
 
     const trimmed = String(rawValue).trim();
 
-    // Revert on blank, non-numeric, decimal, or NaN
-    if (trimmed === '' || isNaN(trimmed) || !Number.isInteger(Number(trimmed))) {
+    // Revert on blank, non-numeric, decimal, scientific notation (e/E), or negative
+    if (trimmed === '' || !/^\d+$/.test(trimmed)) {
       item.qty = item.lastValidQty;
       return;
     }
 
     let parsed = parseInt(trimmed, 10);
 
-    // Revert on zero or negative
+    // Revert on zero (strictly below minimum allowed quantity of 1)
     if (parsed < CONFIG.MIN_QTY) {
       item.qty = item.lastValidQty;
       return;
     }
 
-    // Clamp values above maximum
+    // Clamp values above maximum allowed quantity (99)
     if (parsed > CONFIG.MAX_QTY) {
       parsed = CONFIG.MAX_QTY;
     }

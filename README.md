@@ -137,19 +137,20 @@ Every test uses **web-first assertions** (`toBeVisible`, `toHaveText`, `toHaveVa
 | **AT-04** | `[Idempotency]` | Rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation. | R2 (Duplicate order creation) | PASS |
 | **AT-05** | `[Validation]` | Submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name. | R3 (Empty cart order accepted) | PASS |
 | **AT-06** | `[Data Preservation]` | Removing items after entering customer name retains input value upon validation failure. | R4 (Lost customer input) | PASS |
+| **AT-07** | `[Edge Cases]` | Scientific notation (`1e2`), zero, negative, and decimal inputs revert to last valid quantity while >99 clamps to 99. | R5 (Quantity boundary flaws) | PASS |
 
 ---
 
 ## 5. Machine-Readable Test Reports
 
-Automated test runs generate machine-readable artifacts for CI/CD pipelines and programmatic verification:
+Automated test runs generate machine-readable artifacts tracked directly in the repository tree for independent inspection:
 
 - **JSON Report:** [`test-results/report.json`](test-results/report.json)
-  - Detailed suite metadata, duration, per-test assertions, worker assignment, and status.
+  - Full suite metadata, execution timestamps, duration, per-test assertions, worker assignment, and pass/fail metrics.
 - **JUnit XML Report:** [`test-results/results.xml`](test-results/results.xml)
-  - Standard JUnit XML format compatible with Jenkins, GitHub Actions, GitLab CI, and CircleCI.
+  - Standard JUnit XML test suite report inspectable in repository trees and compatible with CI engines.
 - **Interactive HTML Report:** `playwright-report/index.html` (view with `npm run report`)
-- **Reliability Log:** [`evidence/test-run.txt`](evidence/test-run.txt) (terminal log of 30/30 passed repetitions).
+- **Reliability Log:** [`evidence/test-run.txt`](evidence/test-run.txt) (terminal log of 35/35 passed repetitions across 5 runs).
 
 ---
 
@@ -158,9 +159,11 @@ Automated test runs generate machine-readable artifacts for CI/CD pipelines and 
 - **No `console.log` Clutter:** The codebase contains 0 `console.log`, `console.debug`, or leftover debugging statements.
 - **Strict Linting Enforcement:** Configured with ESLint 9 enforcing `no-console`, `no-unused-vars`, `eqeqeq`, `no-var`, `prefer-const`, and `semi`.
 - **Zero Dead Code:** All declared constants, classes, and helper methods are actively utilized.
-- **Defensive Quantity Edge Cases:**
-  - Blank, decimal (e.g. `1.5`), negative (e.g. `-1`), zero (`0`), or non-numeric (`abc`, `1e2`) inputs instantly revert to `lastValidQty`.
-  - Quantities greater than 99 automatically clamp to `99`.
+- **Strict Integer Validation & Scientific Notation Defense:**
+  - `updateQuantity` verifies inputs against `/^\d+$/` before numerical conversion.
+  - Scientific notation strings like `1e2` (which standard JavaScript `Number('1e2') === 100` would accept while `parseInt('1e2') === 1` would truncate) are rejected by regex and revert to `lastValidQty`.
+  - Decimals (e.g. `1.5`), negatives (`-1`), zero (`0`), and blank inputs revert to `lastValidQty`.
+  - Valid integer values greater than 99 clamp to `99`.
 
 ---
 

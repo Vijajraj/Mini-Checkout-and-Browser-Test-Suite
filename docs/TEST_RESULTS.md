@@ -21,12 +21,13 @@
 | **AT-04** | `[Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation` | Pass | 519ms | Synchronous boolean guard verified with polling assertion |
 | **AT-05** | `[Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name` | Pass | 327ms | Cart error displayed, customer name preserved |
 | **AT-06** | `[Data Preservation] removing items after entering customer name retains input value upon validation failure` | Pass | 475ms | Input value preserved across cart item removal |
+| **AT-07** | `[Edge Cases] scientific notation (1e2), zero, negative, and decimal inputs revert to last valid quantity while >99 clamps to 99` | Pass | 456ms | Strict `/^\d+$/` guard prevents `1e2` from parsing as 1; boundary tests verified |
 
-**Total: 6 passed, 0 failed, 0 skipped (4.4s)**
+**Total: 7 passed, 0 failed, 0 skipped (4.8s)**
 
 ### Reliability Repeat Run (`npm run test:repeat` / `--repeat-each=5`)
 
-All 6 tests × 5 repetitions = **30 runs, 30 passed, 0 failed (19.3s)**.
+All 7 tests x 5 repetitions = **35 runs, 35 passed, 0 failed (24.5s)**.
 
 Zero flakiness detected. Full terminal output saved to [`evidence/test-run.txt`](../evidence/test-run.txt).
 

@@ -176,3 +176,47 @@ test('AT-06: [Data Preservation] removing items after entering customer name ret
   // Assertion: Zero confirmation panels rendered
   await expect(page.getByTestId('confirmation')).toHaveCount(0);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-07 — [Edge Cases] Scientific Notation and Boundary Inputs
+//  Covers: TC-08, TC-09, TC-10, TC-11, TC-12, R5
+//  Behavior: Non-digit inputs including scientific notation (1e2), decimals (1.5),
+//            negatives (-1), and zero revert to last valid quantity; inputs > 99 clamp to 99.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-07: [Edge Cases] scientific notation (1e2), zero, negative, and decimal inputs revert to last valid quantity while >99 clamps to 99', async ({ page }) => {
+  // Step 1: Add product (initial qty = 1)
+  await page.getByTestId('add-tee').click();
+  const qtyInput = page.getByTestId('qty-tee');
+  await expect(qtyInput).toHaveValue('1');
+
+  // Step 2: Set quantity to valid 5 (lastValidQty becomes 5)
+  await qtyInput.fill('5');
+  await expect(qtyInput).toHaveValue('5');
+  await expect(page.getByTestId('line-total-tee')).toHaveText('$99.95');
+
+  // Step 3: Enter scientific notation "1e2" -> must revert to 5, NOT parse as 1
+  await qtyInput.fill('1e2');
+  await expect(qtyInput).toHaveValue('5');
+  await expect(page.getByTestId('line-total-tee')).toHaveText('$99.95');
+
+  // Step 4: Enter decimal "1.5" -> must revert to 5
+  await qtyInput.fill('1.5');
+  await expect(qtyInput).toHaveValue('5');
+
+  // Step 5: Enter negative "-1" -> must revert to 5
+  await qtyInput.fill('-1');
+  await expect(qtyInput).toHaveValue('5');
+
+  // Step 6: Enter zero "0" -> must revert to 5
+  await qtyInput.fill('0');
+  await expect(qtyInput).toHaveValue('5');
+
+  // Step 7: Enter blank -> must revert to 5
+  await qtyInput.fill('');
+  await expect(qtyInput).toHaveValue('5');
+
+  // Step 8: Enter large number "999" -> must clamp to 99
+  await qtyInput.fill('999');
+  await expect(qtyInput).toHaveValue('99');
+  await expect(page.getByTestId('line-total-tee')).toHaveText('$1,979.01');
+});

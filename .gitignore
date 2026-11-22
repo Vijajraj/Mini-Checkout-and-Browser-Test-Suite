@@ -1,5 +1,7 @@
 node_modules/
 playwright-report/
-test-results/
+test-results/*
+!test-results/report.json
+!test-results/results.xml
 .DS_Store
 Thumbs.db
