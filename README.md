@@ -20,7 +20,7 @@ xss_prevention: "Strict textContent DOM binding"
 
 # Mini Checkout and Browser Test Suite
 
-[![Playwright Tests](https://img.shields.io/badge/playwright-30%2F30%20passed-brightgreen.svg)](#test-suite-coverage--matrix)
+[![Playwright Tests](https://img.shields.io/badge/playwright-35%2F35%20passed-brightgreen.svg)](#test-suite-coverage--matrix)
 [![Strict Linting](https://img.shields.io/badge/eslint-strict%20pass-blue.svg)](#100-automated-execution-scripts)
 [![Zero Dead Code](https://img.shields.io/badge/code%20quality-zero%20dead%20code-success.svg)](#zero-dead-code--code-quality-guarantees)
 [![Test Reports](https://img.shields.io/badge/reports-JSON%20%7C%20JUnit%20%7C%20HTML-orange.svg)](#machine-readable-test-reports)
@@ -51,8 +51,8 @@ npm run verify
 | Script | Command | Purpose |
 |:---|:---|:---|
 | `npm start` | `http-server . -p 4173 -c-1` | Serves the web app on `http://127.0.0.1:4173` |
-| `npm test` | `playwright test` | Runs the 6 automated browser tests via Playwright |
-| `npm run test:repeat` | `playwright test --repeat-each=5` | Executes 30-run flakiness verification suite |
+| `npm test` | `playwright test` | Runs the 7 automated browser tests via Playwright |
+| `npm run test:repeat` | `playwright test --repeat-each=5` | Executes 35-run flakiness verification suite (7 tests x 5 runs) |
 | `npm run test:headed` | `playwright test --headed` | Executes tests with a visible Chromium browser window |
 | `npm run report` | `playwright show-report` | Opens the interactive visual HTML test report |
 | `npm run lint` | `eslint .` | Runs strict ESLint checks (zero console.log, zero dead code) |
@@ -81,7 +81,7 @@ mini-checkout/
 │   ├── screenshot.png       # Application UI overview screenshot
 │   ├── mt-01.png            # Manual test MT-01 evidence (empty cart validation)
 │   ├── mt-02.png            # Manual test MT-02 evidence (double-click guard)
-│   └── test-run.txt         # Terminal output from 30/30 repeat execution
+│   └── test-run.txt         # Terminal output from 35/35 repeat execution
 └── test-results/
     ├── report.json          # Machine-readable JSON test execution report
     └── results.xml          # Machine-readable JUnit XML test report

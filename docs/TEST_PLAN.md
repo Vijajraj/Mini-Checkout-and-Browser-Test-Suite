@@ -38,7 +38,7 @@
 | R2   | Duplicate order / double confirmation on rapid clicks| High   | Medium     | AT-04, MT-02      |
 | R3   | Invalid order accepted (empty cart or blank name)    | High   | Medium     | AT-02, AT-05, MT-01|
 | R4   | Customer input lost after a validation error         | Medium | Medium     | AT-06             |
-| R5   | Quantity edge cases (0, negative, decimal, huge, blank)| Medium| High       | TC-08–TC-12       |
+| R5   | Quantity edge cases (0, negative, decimal, huge, blank)| Medium| High       | AT-07, TC-08–TC-12 |
 | R6   | Confirmation unclear or missing reference            | Medium | Low        | AT-01             |
 | R7   | Name rendered unsafely (script/HTML injection)       | Medium | Low        | TC-14             |
 | R8   | Keyboard-only use broken                             | Low    | Medium     | TC-15             |
@@ -74,7 +74,7 @@
 
 **Exit criteria:**
 - All P1 test cases executed
-- All 6 automated checks (AT-01 to AT-06) pass green
+- All 7 automated checks (AT-01 to AT-07) pass green
 - Automated suite passes 5 consecutive runs (`--repeat-each=5`)
 - All real defects are logged in `docs/DEFECTS.md`
 - Manual tests MT-01 and MT-02 executed with evidence
