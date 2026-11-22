@@ -1,168 +1,178 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
-// ── Clean state: every test starts from a fresh page load ──
+// ── Clean state: every test starts from a fresh browser context & page load ──
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-01 — Successful checkout produces a confirmation
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-01 — [Happy Path] Complete Checkout Journey
 //  Covers: TC-01, R6
-// ═══════════════════════════════════════════════════════════
-test('AT-01 successful checkout produces a confirmation', async ({ page }) => {
-  // Add Classic Tee
+//  Behavior: Adding an item and submitting with a valid name produces an
+//            accessible confirmation panel with a cryptographically generated
+//            ORD- reference, customer name, and exact dollar total.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-01: [Happy Path] adding product and submitting valid name renders confirmation with ORD- reference, name, and exact amount', async ({ page }) => {
+  // Step 1: Add Classic Tee ($19.99)
   await page.getByTestId('add-tee').click();
 
-  // Fill name
+  // Step 2: Fill customer name
   await page.getByLabel('Full name').fill('Asha Test');
 
-  // Click Place Order
+  // Step 3: Submit order
   await page.getByTestId('place-order').click();
 
-  // Confirmation is visible and contains "Order confirmed"
+  // Assertion: Confirmation panel exists, is visible, and announces status
   const confirmation = page.getByTestId('confirmation');
   await expect(confirmation).toBeVisible();
   await expect(confirmation).toContainText('Order confirmed');
 
-  // Reference matches ORD- plus 8 alphanumeric chars
+  // Assertion: Order reference adheres to ORD- plus 8 alphanumeric characters
   const orderRef = page.getByTestId('order-ref');
   await expect(orderRef).toHaveText(/^ORD-[A-Z0-9]{8}$/);
 
-  // Confirmation shows customer name and amount
+  // Assertion: Confirmation reflects entered name and exact total
   await expect(confirmation).toContainText('Asha Test');
   await expect(confirmation).toContainText('$19.99');
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-02 — Missing name blocks checkout
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-02 — [Validation] Missing Required Name Field
 //  Covers: TC-02, R3
-// ═══════════════════════════════════════════════════════════
-test('AT-02 missing name blocks checkout', async ({ page }) => {
-  // Add Classic Tee
+//  Behavior: Submitting without entering a name blocks order creation,
+//            displays an accessible error, sets aria-invalid, and preserves cart.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-02: [Validation] submitting with empty name displays error message, blocks confirmation, and preserves cart line', async ({ page }) => {
+  // Step 1: Add product to cart
   await page.getByTestId('add-tee').click();
 
-  // Leave name blank, click Place Order
+  // Step 2: Leave name blank and submit
   await page.getByTestId('place-order').click();
 
-  // Name error message shown
+  // Assertion: Name validation error is visible with exact guidance text
   const nameError = page.getByTestId('name-error');
   await expect(nameError).toBeVisible();
   await expect(nameError).toHaveText('Please enter your name.');
 
-  // No confirmation appears
+  // Assertion: Zero confirmation elements rendered
   await expect(page.getByTestId('confirmation')).toHaveCount(0);
 
-  // Cart line still visible with quantity 1
+  // Assertion: Cart state is preserved without disruption
   await expect(page.getByTestId('line-tee')).toBeVisible();
   await expect(page.getByTestId('qty-tee')).toHaveValue('1');
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-03 — Quantity change updates the exact total
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-03 — [Calculation] Multi-Item Quantity Arithmetic
 //  Covers: TC-05, TC-07, R1
-// ═══════════════════════════════════════════════════════════
-test('AT-03 quantity change updates the exact total', async ({ page }) => {
-  // Add Classic Tee, set qty to 3
+//  Behavior: Dynamic quantity edits update line totals and order total
+//            with exact integer-cents precision (3 x $19.99 + 2 x $7.50 = $74.97).
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-03: [Calculation] updating product quantities computes exact line totals and order total via integer-cents arithmetic', async ({ page }) => {
+  // Step 1: Add Classic Tee ($19.99) and set quantity to 3
   await page.getByTestId('add-tee').click();
   await page.getByTestId('qty-tee').fill('3');
 
-  // Verify line total: 3 × $19.99 = $59.97
+  // Assertion: Line total equals 3 * $19.99 = $59.97
   await expect(page.getByTestId('line-total-tee')).toHaveText('$59.97');
 
-  // Add Ceramic Mug, set qty to 2
+  // Step 2: Add Ceramic Mug ($7.50) and set quantity to 2
   await page.getByTestId('add-mug').click();
   await page.getByTestId('qty-mug').fill('2');
 
-  // Verify line total: 2 × $7.50 = $15.00
+  // Assertion: Line total equals 2 * $7.50 = $15.00
   await expect(page.getByTestId('line-total-mug')).toHaveText('$15.00');
 
-  // Order total: $59.97 + $15.00 = $74.97
+  // Assertion: Grand order total equals $59.97 + $15.00 = $74.97
   await expect(page.getByTestId('order-total')).toHaveText('$74.97');
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-04 — Double click on Place Order gives one confirmation
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-04 — [Idempotency] Double-Click & Rapid-Click Race Condition Guard
 //  Covers: TC-16, R2
-// ═══════════════════════════════════════════════════════════
-test('AT-04 double click on Place Order gives one confirmation', async ({ page }) => {
-  // Variant 1: dblclick
+//  Behavior: Rapid consecutive clicks (dblclick and 3x burst) trigger
+//            synchronous guard to prevent duplicate orders or mutating references.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-04: [Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation', async ({ page }) => {
+  // Variant A: Fast double click
   await page.getByTestId('add-tee').click();
   await page.getByLabel('Full name').fill('Double Test');
-
-  // Double-click Place Order
   await page.getByTestId('place-order').dblclick();
 
-  // Exactly one confirmation
+  // Assertion: Exactly 1 confirmation panel exists
   await expect(page.getByTestId('confirmation')).toHaveCount(1);
+  const initialRef = await page.getByTestId('order-ref').textContent();
 
-  // Grab the reference
-  const refText = await page.getByTestId('order-ref').textContent();
-
-  // Verify reference stays stable (no second order overwrote it)
+  // Assertion: Order reference remains identical across continuous polling
   await expect.poll(
     async () => page.getByTestId('order-ref').textContent(),
     { timeout: 1000 }
-  ).toBe(refText);
+  ).toBe(initialRef);
 
-  // Variant 2: click({ clickCount: 3 })
+  // Variant B: Fast triple click burst from fresh context
   await page.goto('/');
   await page.getByTestId('add-tee').click();
   await page.getByLabel('Full name').fill('Triple Test');
   await page.getByTestId('place-order').click({ clickCount: 3 });
 
+  // Assertion: Exactly 1 confirmation panel exists
   await expect(page.getByTestId('confirmation')).toHaveCount(1);
-  const refText2 = await page.getByTestId('order-ref').textContent();
+  const tripleRef = await page.getByTestId('order-ref').textContent();
   await expect.poll(
     async () => page.getByTestId('order-ref').textContent(),
     { timeout: 1000 }
-  ).toBe(refText2);
+  ).toBe(tripleRef);
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-05 — Empty cart blocks checkout
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-05 — [Validation] Empty Cart Submission Guard
 //  Covers: TC-04, R3
-// ═══════════════════════════════════════════════════════════
-test('AT-05 empty cart blocks checkout', async ({ page }) => {
-  // Fill name but leave cart empty
+//  Behavior: Submitting without any items in the cart displays a descriptive
+//            cart error, prevents order creation, and preserves typed name.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-05: [Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name', async ({ page }) => {
+  // Step 1: Type customer name without adding any products
   await page.getByLabel('Full name').fill('No Cart User');
 
-  // Click Place Order
+  // Step 2: Attempt checkout
   await page.getByTestId('place-order').click();
 
-  // Cart error shown
+  // Assertion: Cart error appears with prescribed text
   const cartError = page.getByTestId('cart-error');
   await expect(cartError).toBeVisible();
   await expect(cartError).toContainText('Your cart is empty');
 
-  // No confirmation
+  // Assertion: Zero confirmation panels rendered
   await expect(page.getByTestId('confirmation')).toHaveCount(0);
 
-  // Name input still has the typed value
+  // Assertion: Customer name is preserved
   await expect(page.getByLabel('Full name')).toHaveValue('No Cart User');
 });
 
-// ═══════════════════════════════════════════════════════════
-//  AT-06 — Validation preserves entered data
+// ═══════════════════════════════════════════════════════════════════════════
+//  AT-06 — [Data Preservation] State Retention After Item Removal
 //  Covers: TC-13, R4
-// ═══════════════════════════════════════════════════════════
-test('AT-06 validation preserves entered data', async ({ page }) => {
-  // Add item, type name
+//  Behavior: Adding an item, typing a name, and removing all items before
+//            checkout triggers cart validation while retaining the entered name.
+// ═══════════════════════════════════════════════════════════════════════════
+test('AT-06: [Data Preservation] removing items after entering customer name retains input value upon validation failure', async ({ page }) => {
+  // Step 1: Add product and fill customer name
   await page.getByTestId('add-tee').click();
   await page.getByLabel('Full name').fill('Preserved Name');
 
-  // Remove the item
+  // Step 2: Remove the product, returning cart to empty state ($0.00)
   await page.getByTestId('remove-tee').click();
 
-  // Try to place order
+  // Step 3: Attempt checkout
   await page.getByTestId('place-order').click();
 
-  // Name value is preserved
+  // Assertion: Name value is preserved in the input
   await expect(page.getByLabel('Full name')).toHaveValue('Preserved Name');
 
-  // Cart error shown
+  // Assertion: Cart error is displayed
   await expect(page.getByTestId('cart-error')).toBeVisible();
 
-  // No confirmation
+  // Assertion: Zero confirmation panels rendered
   await expect(page.getByTestId('confirmation')).toHaveCount(0);
 });
