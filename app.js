@@ -1,282 +1,373 @@
-/* ============================================================
-   Mini Checkout – app.js
-   Vanilla JS, integer-cents money, no framework, no build step.
-   ============================================================ */
+/**
+ * Mini Checkout Application
+ * 
+ * Architecture:
+ * - Pure Vanilla JavaScript (ES6+), zero frameworks, zero build step
+ * - Integer-cents financial arithmetic for zero-floating-point rounding errors
+ * - In-memory state management (no localStorage, no cookies)
+ * - Synchronous double-click race condition prevention
+ * - XSS-safe textContent rendering
+ */
 
 'use strict';
 
-// ── Product catalogue (prices in integer cents) ──
-const PRODUCTS = [
-  { id: 'tee', name: 'Classic Tee', priceCents: 1999 },
-  { id: 'mug', name: 'Ceramic Mug', priceCents: 750 },
-];
+// ============================================================================
+// 1. CONFIGURATION & CONSTANTS
+// ============================================================================
 
-// ── State (in-memory only) ──
-const cart = {}; // { [productId]: { qty: number, lastValidQty: number } }
-let orderPlaced = false;
+const CONFIG = Object.freeze({
+  MIN_QTY: 1,
+  MAX_QTY: 99,
+  REF_PREFIX: 'ORD-',
+  REF_LENGTH: 8,
+  REF_CHARSET: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+  PRODUCTS: Object.freeze([
+    { id: 'tee', name: 'Classic Tee', priceCents: 1999 },
+    { id: 'mug', name: 'Ceramic Mug', priceCents: 750 },
+  ]),
+});
 
-// ── Currency formatter ──
-const formatCents = (cents) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-    .format(cents / 100);
+const CurrencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
 
-// ── DOM references ──
-const cartLinesEl    = document.getElementById('cart-lines');
-const orderTotalEl   = document.querySelector('[data-testid="order-total"]');
-const checkoutForm   = document.getElementById('checkout-form');
-const nameInput      = document.getElementById('name-input');
-const nameErrorEl    = document.querySelector('[data-testid="name-error"]');
-const cartErrorEl    = document.querySelector('[data-testid="cart-error"]');
-const placeOrderBtn  = document.querySelector('[data-testid="place-order"]');
-const confirmationEl = document.getElementById('confirmation-container');
-
-// ── Helpers ──
-function getProduct(id) {
-  return PRODUCTS.find((p) => p.id === id);
+function formatCents(cents) {
+  return CurrencyFormatter.format(cents / 100);
 }
 
-function cartIsEmpty() {
-  return Object.keys(cart).length === 0;
-}
+// ============================================================================
+// 2. STATE MANAGEMENT (IN-MEMORY ONLY)
+// ============================================================================
 
-function computeOrderTotalCents() {
-  return Object.entries(cart).reduce((sum, [id, item]) => {
-    const product = getProduct(id);
-    return sum + product.priceCents * item.qty;
-  }, 0);
-}
-
-function generateOrderRef() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  let ref = 'ORD-';
-  for (let i = 0; i < 8; i++) {
-    ref += chars[bytes[i] % chars.length];
-  }
-  return ref;
-}
-
-// ── Render cart ──
-function renderCart() {
-  cartLinesEl.innerHTML = '';
-
-  for (const [id, item] of Object.entries(cart)) {
-    const product = getProduct(id);
-    const lineTotalCents = product.priceCents * item.qty;
-
-    const lineEl = document.createElement('div');
-    lineEl.className = 'cart-line';
-    lineEl.dataset.testid = `line-${id}`;
-
-    // Name
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'line-name';
-    nameSpan.textContent = product.name;
-    lineEl.appendChild(nameSpan);
-
-    // Unit price
-    const priceSpan = document.createElement('span');
-    priceSpan.className = 'line-price';
-    priceSpan.textContent = formatCents(product.priceCents);
-    lineEl.appendChild(priceSpan);
-
-    // Quantity input
-    const qtyInput = document.createElement('input');
-    qtyInput.type = 'number';
-    qtyInput.min = '1';
-    qtyInput.max = '99';
-    qtyInput.value = String(item.qty);
-    qtyInput.dataset.testid = `qty-${id}`;
-    qtyInput.dataset.productId = id;
-    qtyInput.disabled = orderPlaced;
-    qtyInput.setAttribute('aria-label', `Quantity for ${product.name}`);
-    lineEl.appendChild(qtyInput);
-
-    // Line total
-    const totalSpan = document.createElement('span');
-    totalSpan.className = 'line-total';
-    totalSpan.dataset.testid = `line-total-${id}`;
-    totalSpan.textContent = formatCents(lineTotalCents);
-    lineEl.appendChild(totalSpan);
-
-    // Remove button
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
-    removeBtn.dataset.testid = `remove-${id}`;
-    removeBtn.dataset.productId = id;
-    removeBtn.textContent = 'Remove';
-    removeBtn.disabled = orderPlaced;
-    lineEl.appendChild(removeBtn);
-
-    cartLinesEl.appendChild(lineEl);
+class CartStore {
+  constructor() {
+    /** @type {Record<string, { qty: number, lastValidQty: number }>} */
+    this.items = {};
+    this.orderPlaced = false;
   }
 
-  orderTotalEl.textContent = formatCents(computeOrderTotalCents());
-}
-
-// ── Quantity validation ──
-function validateAndApplyQty(productId, rawValue) {
-  const item = cart[productId];
-  if (!item) return;
-
-  const trimmed = String(rawValue).trim();
-
-  // Blank, non-numeric, or not an integer → revert
-  if (trimmed === '' || isNaN(trimmed) || !Number.isInteger(Number(trimmed))) {
-    item.qty = item.lastValidQty;
-    renderCart();
-    return;
+  getProduct(productId) {
+    return CONFIG.PRODUCTS.find((p) => p.id === productId);
   }
 
-  let n = parseInt(trimmed, 10);
-
-  // Zero, negative → revert
-  if (n <= 0) {
-    item.qty = item.lastValidQty;
-    renderCart();
-    return;
-  }
-
-  // Clamp to 99
-  if (n > 99) {
-    n = 99;
-  }
-
-  item.qty = n;
-  item.lastValidQty = n;
-  renderCart();
-}
-
-// ── Event: Add to cart ──
-document.querySelectorAll('[data-product-id]').forEach((btn) => {
-  if (btn.tagName !== 'BUTTON' || btn.classList.contains('remove-btn')) return;
-
-  btn.addEventListener('click', () => {
-    if (orderPlaced) return;
-    const id = btn.dataset.productId;
-    if (cart[id]) {
-      if (cart[id].qty < 99) {
-        cart[id].qty += 1;
-        cart[id].lastValidQty = cart[id].qty;
+  addItem(productId) {
+    if (this.orderPlaced) return;
+    const existing = this.items[productId];
+    if (existing) {
+      if (existing.qty < CONFIG.MAX_QTY) {
+        existing.qty += 1;
+        existing.lastValidQty = existing.qty;
       }
     } else {
-      cart[id] = { qty: 1, lastValidQty: 1 };
+      this.items[productId] = { qty: 1, lastValidQty: 1 };
     }
-    // Clear cart error when adding an item
-    cartErrorEl.hidden = true;
-    cartErrorEl.textContent = '';
-    renderCart();
-  });
-});
-
-// ── Event: Quantity change (delegated) ──
-cartLinesEl.addEventListener('input', (e) => {
-  if (e.target.type === 'number' && e.target.dataset.productId) {
-    const id = e.target.dataset.productId;
-    validateAndApplyQty(id, e.target.value);
-  }
-});
-
-// ── Event: Quantity blur – also validate on blur for safety ──
-cartLinesEl.addEventListener('change', (e) => {
-  if (e.target.type === 'number' && e.target.dataset.productId) {
-    const id = e.target.dataset.productId;
-    validateAndApplyQty(id, e.target.value);
-  }
-});
-
-// ── Event: Remove from cart (delegated) ──
-cartLinesEl.addEventListener('click', (e) => {
-  if (e.target.classList.contains('remove-btn') && e.target.dataset.productId) {
-    if (orderPlaced) return;
-    const id = e.target.dataset.productId;
-    delete cart[id];
-    renderCart();
-  }
-});
-
-// ── Event: Place order ──
-checkoutForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  // Double-click guard: synchronous boolean check FIRST
-  if (orderPlaced) return;
-
-  // Clear previous errors
-  let hasError = false;
-
-  // Validate name
-  const customerName = nameInput.value.trim();
-  if (customerName === '') {
-    nameErrorEl.textContent = 'Please enter your name.';
-    nameErrorEl.hidden = false;
-    nameInput.setAttribute('aria-invalid', 'true');
-    nameInput.focus();
-    hasError = true;
-  } else {
-    nameErrorEl.textContent = '';
-    nameErrorEl.hidden = true;
-    nameInput.removeAttribute('aria-invalid');
   }
 
-  // Validate cart
-  if (cartIsEmpty()) {
-    cartErrorEl.textContent = 'Your cart is empty. Add at least one item to check out.';
-    cartErrorEl.hidden = false;
-    hasError = true;
-  } else {
-    cartErrorEl.textContent = '';
-    cartErrorEl.hidden = true;
+  updateQuantity(productId, rawValue) {
+    const item = this.items[productId];
+    if (!item) return;
+
+    const trimmed = String(rawValue).trim();
+
+    // Revert on blank, non-numeric, decimal, or NaN
+    if (trimmed === '' || isNaN(trimmed) || !Number.isInteger(Number(trimmed))) {
+      item.qty = item.lastValidQty;
+      return;
+    }
+
+    let parsed = parseInt(trimmed, 10);
+
+    // Revert on zero or negative
+    if (parsed < CONFIG.MIN_QTY) {
+      item.qty = item.lastValidQty;
+      return;
+    }
+
+    // Clamp values above maximum
+    if (parsed > CONFIG.MAX_QTY) {
+      parsed = CONFIG.MAX_QTY;
+    }
+
+    item.qty = parsed;
+    item.lastValidQty = parsed;
   }
 
-  if (hasError) return;
+  removeItem(productId) {
+    if (this.orderPlaced) return;
+    delete this.items[productId];
+  }
 
-  // ─── ORDER PLACED ───
-  // Set the guard synchronously BEFORE any DOM rendering
-  orderPlaced = true;
-  placeOrderBtn.disabled = true;
+  isEmpty() {
+    return Object.keys(this.items).length === 0;
+  }
 
-  // Disable all interactive elements
-  nameInput.disabled = true;
-  document.querySelectorAll('[data-product-id]').forEach((el) => {
-    if (el.tagName === 'BUTTON') el.disabled = true;
-  });
-  document.querySelectorAll('#cart-lines input[type="number"]').forEach((el) => {
-    el.disabled = true;
-  });
-  document.querySelectorAll('.remove-btn').forEach((el) => {
-    el.disabled = true;
-  });
+  computeLineTotalCents(productId) {
+    const product = this.getProduct(productId);
+    const item = this.items[productId];
+    if (!product || !item) return 0;
+    return product.priceCents * item.qty;
+  }
 
-  // Build confirmation
-  const ref = generateOrderRef();
-  const totalText = formatCents(computeOrderTotalCents());
+  computeOrderTotalCents() {
+    return Object.entries(this.items).reduce((total, [id, item]) => {
+      const product = this.getProduct(id);
+      return total + (product ? product.priceCents * item.qty : 0);
+    }, 0);
+  }
+}
 
-  const panel = document.createElement('div');
-  panel.className = 'confirmation-panel';
-  panel.setAttribute('role', 'status');
-  panel.dataset.testid = 'confirmation';
+// ============================================================================
+// 3. CRYPTO ORDER REFERENCE GENERATOR
+// ============================================================================
 
-  const heading = document.createElement('h3');
-  heading.textContent = 'Order confirmed';
-  panel.appendChild(heading);
+function generateSecureOrderRef() {
+  const bytes = new Uint8Array(CONFIG.REF_LENGTH);
+  crypto.getRandomValues(bytes);
+  let refSuffix = '';
+  for (let i = 0; i < CONFIG.REF_LENGTH; i++) {
+    refSuffix += CONFIG.REF_CHARSET[bytes[i] % CONFIG.REF_CHARSET.length];
+  }
+  return `${CONFIG.REF_PREFIX}${refSuffix}`;
+}
 
-  const refP = document.createElement('p');
-  refP.textContent = 'Reference: ';
-  const refSpan = document.createElement('span');
-  refSpan.dataset.testid = 'order-ref';
-  refSpan.textContent = ref;
-  refP.appendChild(refSpan);
-  panel.appendChild(refP);
+// ============================================================================
+// 4. UI RENDERER & DOM BINDINGS
+// ============================================================================
 
-  const nameP = document.createElement('p');
-  nameP.textContent = `Customer: ${customerName}`;
-  panel.appendChild(nameP);
+class CheckoutView {
+  constructor() {
+    this.cartLinesEl    = document.getElementById('cart-lines');
+    this.orderTotalEl   = document.querySelector('[data-testid="order-total"]');
+    this.checkoutForm   = document.getElementById('checkout-form');
+    this.nameInput      = document.getElementById('name-input');
+    this.nameErrorEl    = document.querySelector('[data-testid="name-error"]');
+    this.cartErrorEl    = document.querySelector('[data-testid="cart-error"]');
+    this.placeOrderBtn  = document.querySelector('[data-testid="place-order"]');
+    this.confirmationEl = document.getElementById('confirmation-container');
+  }
 
-  const amountP = document.createElement('p');
-  amountP.textContent = `Amount: ${totalText}`;
-  panel.appendChild(amountP);
+  renderCart(store) {
+    this.cartLinesEl.innerHTML = '';
 
-  confirmationEl.appendChild(panel);
+    for (const [id, item] of Object.entries(store.items)) {
+      const product = store.getProduct(id);
+      if (!product) continue;
+
+      const lineTotalCents = store.computeLineTotalCents(id);
+
+      const lineEl = document.createElement('div');
+      lineEl.className = 'cart-line';
+      lineEl.dataset.testid = `line-${id}`;
+
+      // Item Name
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'line-name';
+      nameSpan.textContent = product.name;
+      lineEl.appendChild(nameSpan);
+
+      // Item Price
+      const priceSpan = document.createElement('span');
+      priceSpan.className = 'line-price';
+      priceSpan.textContent = formatCents(product.priceCents);
+      lineEl.appendChild(priceSpan);
+
+      // Quantity Input
+      const qtyInput = document.createElement('input');
+      qtyInput.type = 'number';
+      qtyInput.min = String(CONFIG.MIN_QTY);
+      qtyInput.max = String(CONFIG.MAX_QTY);
+      qtyInput.value = String(item.qty);
+      qtyInput.dataset.testid = `qty-${id}`;
+      qtyInput.dataset.productId = id;
+      qtyInput.disabled = store.orderPlaced;
+      qtyInput.setAttribute('aria-label', `Quantity for ${product.name}`);
+      lineEl.appendChild(qtyInput);
+
+      // Line Total
+      const totalSpan = document.createElement('span');
+      totalSpan.className = 'line-total';
+      totalSpan.dataset.testid = `line-total-${id}`;
+      totalSpan.textContent = formatCents(lineTotalCents);
+      lineEl.appendChild(totalSpan);
+
+      // Remove Button
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.dataset.testid = `remove-${id}`;
+      removeBtn.dataset.productId = id;
+      removeBtn.textContent = 'Remove';
+      removeBtn.disabled = store.orderPlaced;
+      lineEl.appendChild(removeBtn);
+
+      this.cartLinesEl.appendChild(lineEl);
+    }
+
+    this.orderTotalEl.textContent = formatCents(store.computeOrderTotalCents());
+  }
+
+  setNameError(message) {
+    if (message) {
+      this.nameErrorEl.textContent = message;
+      this.nameErrorEl.hidden = false;
+      this.nameInput.setAttribute('aria-invalid', 'true');
+      this.nameInput.setAttribute('aria-describedby', 'name-error');
+      this.nameInput.focus();
+    } else {
+      this.nameErrorEl.textContent = '';
+      this.nameErrorEl.hidden = true;
+      this.nameInput.removeAttribute('aria-invalid');
+      this.nameInput.removeAttribute('aria-describedby');
+    }
+  }
+
+  setCartError(message) {
+    if (message) {
+      this.cartErrorEl.textContent = message;
+      this.cartErrorEl.hidden = false;
+    } else {
+      this.cartErrorEl.textContent = '';
+      this.cartErrorEl.hidden = true;
+    }
+  }
+
+  lockAllControls() {
+    this.nameInput.disabled = true;
+    this.placeOrderBtn.disabled = true;
+
+    document.querySelectorAll('[data-product-id]').forEach((el) => {
+      if (el.tagName === 'BUTTON') el.disabled = true;
+    });
+    document.querySelectorAll('#cart-lines input[type="number"]').forEach((el) => {
+      el.disabled = true;
+    });
+    document.querySelectorAll('.remove-btn').forEach((el) => {
+      el.disabled = true;
+    });
+  }
+
+  renderConfirmation(reference, customerName, totalFormatted) {
+    const panel = document.createElement('div');
+    panel.className = 'confirmation-panel';
+    panel.setAttribute('role', 'status');
+    panel.dataset.testid = 'confirmation';
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'Order confirmed';
+    panel.appendChild(heading);
+
+    const refP = document.createElement('p');
+    refP.textContent = 'Reference: ';
+    const refSpan = document.createElement('span');
+    refSpan.dataset.testid = 'order-ref';
+    refSpan.textContent = reference;
+    refP.appendChild(refSpan);
+    panel.appendChild(refP);
+
+    // XSS defense: strict textContent usage
+    const nameP = document.createElement('p');
+    nameP.textContent = `Customer: ${customerName}`;
+    panel.appendChild(nameP);
+
+    const amountP = document.createElement('p');
+    amountP.textContent = `Amount: ${totalFormatted}`;
+    panel.appendChild(amountP);
+
+    this.confirmationEl.appendChild(panel);
+  }
+}
+
+// ============================================================================
+// 5. APPLICATION CONTROLLER
+// ============================================================================
+
+class CheckoutApp {
+  constructor() {
+    this.store = new CartStore();
+    this.view = new CheckoutView();
+    this.initEvents();
+  }
+
+  initEvents() {
+    // 1. Add to cart delegation
+    document.querySelectorAll('[data-product-id]').forEach((btn) => {
+      if (btn.tagName !== 'BUTTON' || btn.classList.contains('remove-btn')) return;
+      btn.addEventListener('click', () => {
+        const productId = btn.dataset.productId;
+        this.store.addItem(productId);
+        this.view.setCartError('');
+        this.view.renderCart(this.store);
+      });
+    });
+
+    // 2. Quantity input and change event delegation
+    const handleQtyEvent = (e) => {
+      if (e.target.type === 'number' && e.target.dataset.productId) {
+        this.store.updateQuantity(e.target.dataset.productId, e.target.value);
+        this.view.renderCart(this.store);
+      }
+    };
+    this.view.cartLinesEl.addEventListener('input', handleQtyEvent);
+    this.view.cartLinesEl.addEventListener('change', handleQtyEvent);
+
+    // 3. Remove item delegation
+    this.view.cartLinesEl.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-btn') && e.target.dataset.productId) {
+        this.store.removeItem(e.target.dataset.productId);
+        this.view.renderCart(this.store);
+      }
+    });
+
+    // 4. Form submission with validation and double-click guard
+    this.view.checkoutForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.handleOrderSubmission();
+    });
+  }
+
+  handleOrderSubmission() {
+    // Synchronous guard check: if order already placed, reject immediately
+    if (this.store.orderPlaced) return;
+
+    const rawName = this.view.nameInput.value;
+    const trimmedName = rawName.trim();
+    let hasValidationError = false;
+
+    // Validate Name
+    if (trimmedName === '') {
+      this.view.setNameError('Please enter your name.');
+      hasValidationError = true;
+    } else {
+      this.view.setNameError('');
+    }
+
+    // Validate Cart
+    if (this.store.isEmpty()) {
+      this.view.setCartError('Your cart is empty. Add at least one item to check out.');
+      hasValidationError = true;
+    } else {
+      this.view.setCartError('');
+    }
+
+    // If validation fails, preserve inputs and return
+    if (hasValidationError) return;
+
+    // --- Validation Passed: Commit Order ---
+    // Synchronously set orderPlaced before DOM updates to block rapid clicks
+    this.store.orderPlaced = true;
+    this.view.lockAllControls();
+
+    const orderRef = generateSecureOrderRef();
+    const formattedTotal = formatCents(this.store.computeOrderTotalCents());
+
+    this.view.renderConfirmation(orderRef, trimmedName, formattedTotal);
+  }
+}
+
+// ============================================================================
+// 6. INITIALIZATION
+// ============================================================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  new CheckoutApp();
 });

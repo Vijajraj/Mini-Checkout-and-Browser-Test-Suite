@@ -8,35 +8,40 @@
 </head>
 <body>
   <main>
-    <h1>Mini Checkout</h1>
+    <header>
+      <h1>Mini Checkout</h1>
+    </header>
 
-    <section class="products" aria-label="Products">
-      <h2>Products</h2>
+    <!-- Product Catalog Section -->
+    <section class="products" aria-labelledby="products-heading">
+      <h2 id="products-heading">Products</h2>
       <div class="product-list">
-        <div class="product-card">
+        <article class="product-card">
           <h3>Classic Tee</h3>
           <p class="price">$19.99</p>
-          <button data-testid="add-tee" data-product-id="tee">Add to cart</button>
-        </div>
-        <div class="product-card">
+          <button type="button" data-testid="add-tee" data-product-id="tee">Add to cart</button>
+        </article>
+        <article class="product-card">
           <h3>Ceramic Mug</h3>
           <p class="price">$7.50</p>
-          <button data-testid="add-mug" data-product-id="mug">Add to cart</button>
-        </div>
+          <button type="button" data-testid="add-mug" data-product-id="mug">Add to cart</button>
+        </article>
       </div>
     </section>
 
-    <section class="cart" aria-label="Shopping cart">
-      <h2>Cart</h2>
-      <div id="cart-lines"></div>
+    <!-- Cart Summary Section -->
+    <section class="cart" aria-labelledby="cart-heading">
+      <h2 id="cart-heading">Cart</h2>
+      <div id="cart-lines" role="region" aria-label="Cart items"></div>
       <div class="order-total-row">
         <strong>Order Total:</strong>
         <span data-testid="order-total">$0.00</span>
       </div>
     </section>
 
-    <section class="checkout" aria-label="Checkout">
-      <h2>Checkout</h2>
+    <!-- Checkout Form Section -->
+    <section class="checkout" aria-labelledby="checkout-heading">
+      <h2 id="checkout-heading">Checkout</h2>
       <form id="checkout-form" novalidate>
         <div class="form-group">
           <label for="name-input">Full name</label>
