@@ -131,12 +131,12 @@ Every test uses **web-first assertions** (`toBeVisible`, `toHaveText`, `toHaveVa
 
 | Test ID | Category | Behavioral Description | Risk Addressed | Spec Gate |
 |:---|:---|:---|:---|:---:|
-| **AT-01** | `[Happy Path]` | Adding product and submitting valid name renders confirmation with `ORD-` reference, customer name, and exact amount. | R6 (Unclear/missing confirmation) | ✅ PASS |
-| **AT-02** | `[Validation]` | Submitting with empty name displays error message, blocks confirmation, and preserves cart items and quantity. | R3 (Invalid order accepted) | ✅ PASS |
-| **AT-03** | `[Calculation]` | Updating product quantities computes exact line totals and order total via integer-cents arithmetic (`3×$19.99 + 2×$7.50 = $74.97`). | R1 (Rounding/stale totals) | ✅ PASS |
-| **AT-04** | `[Idempotency]` | Rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation. | R2 (Duplicate order creation) | ✅ PASS |
-| **AT-05** | `[Validation]` | Submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name. | R3 (Empty cart order accepted) | ✅ PASS |
-| **AT-06** | `[Data Preservation]` | Removing items after entering customer name retains input value upon validation failure. | R4 (Lost customer input) | ✅ PASS |
+| **AT-01** | `[Happy Path]` | Adding product and submitting valid name renders confirmation with `ORD-` reference, customer name, and exact amount. | R6 (Unclear/missing confirmation) | PASS |
+| **AT-02** | `[Validation]` | Submitting with empty name displays error message, blocks confirmation, and preserves cart items and quantity. | R3 (Invalid order accepted) | PASS |
+| **AT-03** | `[Calculation]` | Updating product quantities computes exact line totals and order total via integer-cents arithmetic (`3x$19.99 + 2x$7.50 = $74.97`). | R1 (Rounding/stale totals) | PASS |
+| **AT-04** | `[Idempotency]` | Rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation. | R2 (Duplicate order creation) | PASS |
+| **AT-05** | `[Validation]` | Submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name. | R3 (Empty cart order accepted) | PASS |
+| **AT-06** | `[Data Preservation]` | Removing items after entering customer name retains input value upon validation failure. | R4 (Lost customer input) | PASS |
 
 ---
 
@@ -176,10 +176,10 @@ Automated test runs generate machine-readable artifacts for CI/CD pipelines and 
 
 ## 8. Verification Evidence & Documentation Links
 
-- 📋 [Risk-Based Test Plan (`docs/TEST_PLAN.md`)](docs/TEST_PLAN.md)
-- 📊 [Detailed Test Execution Results (`docs/TEST_RESULTS.md`)](docs/TEST_RESULTS.md)
-- 🔍 [Formal Defect Log (`docs/DEFECTS.md`)](docs/DEFECTS.md)
-- 📁 [Evidence Directory (`evidence/`)](evidence/)
+- [Risk-Based Test Plan (`docs/TEST_PLAN.md`)](docs/TEST_PLAN.md)
+- [Detailed Test Execution Results (`docs/TEST_RESULTS.md`)](docs/TEST_RESULTS.md)
+- [Formal Defect Log (`docs/DEFECTS.md`)](docs/DEFECTS.md)
+- [Evidence Directory (`evidence/`)](evidence/)
   - [Reliability Repeat Log (`evidence/test-run.txt`)](evidence/test-run.txt)
   - [Manual Test MT-01 Screenshot (`evidence/mt-01.png`)](evidence/mt-01.png)
   - [Manual Test MT-02 Screenshot (`evidence/mt-02.png`)](evidence/mt-02.png)

@@ -15,12 +15,12 @@
 
 | ID | Test Name | Result | Duration | Notes |
 |:---|:---|:---:|:---:|:---|
-| **AT-01** | `[Happy Path] adding product and submitting valid name renders confirmation with ORD- reference, name, and exact amount` | ✅ Pass | 801ms | Happy path verified, crypto reference matches `/^ORD-[A-Z0-9]{8}$/` |
-| **AT-02** | `[Validation] submitting with empty name displays error message, blocks confirmation, and preserves cart line` | ✅ Pass | 352ms | Name validation error displayed, 0 confirmations, cart preserved |
-| **AT-03** | `[Calculation] updating product quantities computes exact line totals and order total via integer-cents arithmetic` | ✅ Pass | 365ms | 3 × $19.99 ($59.97) + 2 × $7.50 ($15.00) = $74.97 exact total |
-| **AT-04** | `[Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation` | ✅ Pass | 519ms | Synchronous boolean guard verified with polling assertion |
-| **AT-05** | `[Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name` | ✅ Pass | 327ms | Cart error displayed, customer name preserved |
-| **AT-06** | `[Data Preservation] removing items after entering customer name retains input value upon validation failure` | ✅ Pass | 475ms | Input value preserved across cart item removal |
+| **AT-01** | `[Happy Path] adding product and submitting valid name renders confirmation with ORD- reference, name, and exact amount` | Pass | 801ms | Happy path verified, crypto reference matches `/^ORD-[A-Z0-9]{8}$/` |
+| **AT-02** | `[Validation] submitting with empty name displays error message, blocks confirmation, and preserves cart line` | Pass | 352ms | Name validation error displayed, 0 confirmations, cart preserved |
+| **AT-03** | `[Calculation] updating product quantities computes exact line totals and order total via integer-cents arithmetic` | Pass | 365ms | 3 x $19.99 ($59.97) + 2 x $7.50 ($15.00) = $74.97 exact total |
+| **AT-04** | `[Idempotency] rapid double and triple clicks on place-order trigger synchronous guard, producing exactly one confirmation` | Pass | 519ms | Synchronous boolean guard verified with polling assertion |
+| **AT-05** | `[Validation] submitting with empty cart displays cart error, blocks confirmation, and preserves entered customer name` | Pass | 327ms | Cart error displayed, customer name preserved |
+| **AT-06** | `[Data Preservation] removing items after entering customer name retains input value upon validation failure` | Pass | 475ms | Input value preserved across cart item removal |
 
 **Total: 6 passed, 0 failed, 0 skipped (4.4s)**
 
@@ -46,8 +46,8 @@ The test harness produces standard machine-readable reports on every run:
 
 | Run | Date/Time | Browser/Version | Steps | Expected | Actual | Result | Evidence File |
 |:---|:---|:---|:---|:---|:---|:---:|:---|
-| **MT-01-a** | 2026-11-21 19:32 IST | Chromium 159.0.8154 | Open page → leave cart empty → type name "Manual Tester" → click Place Order | Cart error shown, no confirmation, name preserved | Cart error shown, 0 confirmation elements, "Manual Tester" retained | ✅ Pass | [`evidence/mt-01.png`](../evidence/mt-01.png) |
-| **MT-02-a** | 2026-11-21 19:32 IST | Chromium 159.0.8154 | Add Classic Tee → type name "Double Clicker" → rapid double-click Place Order | Exactly one confirmation and one reference generated | Exactly 1 confirmation panel, single reference ORD-XXXXXXXX, inputs locked | ✅ Pass | [`evidence/mt-02.png`](../evidence/mt-02.png) |
+| **MT-01-a** | 2026-11-21 19:32 IST | Chromium 159.0.8154 | Open page -> leave cart empty -> type name "Manual Tester" -> click Place Order | Cart error shown, no confirmation, name preserved | Cart error shown, 0 confirmation elements, "Manual Tester" retained | Pass | [`evidence/mt-01.png`](../evidence/mt-01.png) |
+| **MT-02-a** | 2026-11-21 19:32 IST | Chromium 159.0.8154 | Add Classic Tee -> type name "Double Clicker" -> rapid double-click Place Order | Exactly one confirmation and one reference generated | Exactly 1 confirmation panel, single reference ORD-XXXXXXXX, inputs locked | Pass | [`evidence/mt-02.png`](../evidence/mt-02.png) |
 
 ---
 
